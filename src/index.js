@@ -1,15 +1,18 @@
-import {types as t} from 'babel-core';
+import { types as t } from 'babel-core';
+import path from 'path';
 
-class BemFormatter {
-    getModuleName() {
-        return 'xxxx';
-    }
+export default function({ Plugin, types: t }) {
+    console.log('!!!!!');
+    var isBemModule = false,
+        bemModules = {},
+        deps = [];
 
-    transform(program) {
+    function transform(program, deps, file) {
         var body = program.body,
-            defineArgs = [t.literal(this.getModuleName())],
-            deps = [t.literal('a1')],
+            defineArgs = [t.literal(path.basename(file.filename, '.js'))],
             declParams = [t.identifier('provide')];
+
+        deps = deps.map(d => t.literal(d));
 
         if(deps.length) {
             defineArgs.push(t.arrayExpression(deps));
@@ -19,7 +22,10 @@ class BemFormatter {
 
         var call = t.callExpression(
             t.memberExpression(
-                t.identifier('modules'),
+                t.callExpression(
+                    t.identifier('require'),
+                    [t.literal('ym')]
+                ),
                 t.identifier('define'),
                 false
             ),
@@ -28,33 +34,31 @@ class BemFormatter {
         program.body = [t.expressionStatement(call)];
     }
 
-    exportDeclaration() {
-
-    }
-}
-
-export default function({ Plugin, types: t }) {
-    var isBemModule = false;
-
-    var bemFormater = new BemFormatter(t);
-
     return new Plugin('bem', {
         visitor : {
             Program : {
                 exit(node, parent, scope, file) {
-                    if(!isBemModule) return;
                     node.body = file.dynamicImports.concat(node.body);
 
-                    bemFormater.transform(node, file.opts);
-                    isBemModule = false;
+                    bemModules[file.opts.filename] && transform(node, deps, file.opts);
+                    deps = [];
                     //this.unshiftContainer('body', t.expressionStatement(t.literal('use helloworld')));
                 }
             },
 
             ImportDeclaration(node, parent, scope, file) {
-                if(node.source.value.indexOf('bem:') !== 0) return;
+                var importPath = node.source.value;
+                if(importPath.indexOf('bem-source:') === 0) {
+                    importPath = node.source.value = path.resolve(
+                        path.dirname(file.opts.filename),
+                        importPath.replace(/^bem-source:/, '')
+                    );
+                    bemModules[importPath] = true;
+                } else if(importPath.indexOf('bem:') === 0) {
+                    deps.push(importPath.replace(/^bem:/, ''));
+                    return [];
+                }
 
-                isBemModule = true;
                 //this.replaceWith(
                 //    t.callExpression(
                 //        t.memberExpression(
@@ -65,15 +69,12 @@ export default function({ Plugin, types: t }) {
                 //        [
                 //
                 //        ]));
-
-                var nodes = [];
-                return nodes;
             },
 
             ExportDefaultDeclaration(node, parent, scope, file) {
-                if(!isBemModule) return;
                 return t.callExpression(t.identifier('provide'), [node.declaration])
             }
         }
     });
+
 }
