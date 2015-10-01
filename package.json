@@ -10,6 +10,7 @@
     "babel": "^5.8.19"
   },
   "scripts": {
-    "build": "babel-plugin build"
+    "build": "babel-plugin build",
+    "prepublish": "npm run build"
   }
 }
