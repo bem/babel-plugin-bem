@@ -45,7 +45,7 @@ export default function({ Plugin, types: t }) {
         visitor : {
             Program : {
                 enter(node, parent, scope, file) {
-                    fileBemItem = bemNaming.parse(path.basename(file.opts.filename, '.js'));
+                    fileBemItem = bemNaming.parse(path.basename(file.opts.filename).split('.')[0]);
                 },
 
                 exit(node, parent, scope, file) {
