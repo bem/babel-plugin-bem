@@ -1,6 +1,8 @@
 # babel-plugin-bem
 
-A [Babel](https://babeljs.io/) plugin for [BEM](https://bem.info).
+[![NPM version](https://img.shields.io/npm/v/babel-plugin-bem.svg?style=flat)](https://www.npmjs.org/package/babel-plugin-bem)
+
+A [Babel](https://babeljs.io/) plugin for [BEM](https://bem.info) methodology.
 
 The plugin helps tranform JS written in ES2015 (formally ES6) to [YModules](https://bem.info/tools/bem/modules/) module
 system, that is used inside [bem-core](https://bem.info/libs/bem-core/) library.
@@ -127,4 +129,5 @@ typeof jQuery !== 'undefined'?
 
 ## License
 
-Code and documentation copyright 2012 YANDEX LLC. Code released under the [Mozilla Public License 2.0](LICENSE.txt).
+Code and documentation copyright 2015 YANDEX LLC.
+Code released under the [Mozilla Public License 2.0](LICENSE.txt).
