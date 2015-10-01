@@ -1,0 +1,5 @@
+{
+  "plugins": ["../"],
+  "optional": ["runtime"],
+  "loose": ["es6.modules"]
+}

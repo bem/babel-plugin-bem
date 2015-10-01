@@ -31,6 +31,6 @@
     "bem-naming": "^0.5.1"
   },
   "devDependencies": {
-    "babel": "^5.8.19"
+    "babel": "^5.8.23"
   }
 }
