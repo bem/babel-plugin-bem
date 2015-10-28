@@ -88,7 +88,7 @@ provide(Button.declMod({ modName : 'type', modVal : 'link' }, {
 });
 ~~~
 
-### 4. A module with async proviton
+### 4. A module with async providing
 
 ~~~js
 // jquery.js
