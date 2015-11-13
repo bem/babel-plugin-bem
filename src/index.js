@@ -4,28 +4,37 @@ import bemNaming from 'bem-naming';
 
 export default function({ Plugin, types: t }) {
     var fileBemItem = null,
-        isBemModule = false,
         bemModules = {},
         deps = [],
         prevDecl = null,
-        asyncProvide = null;
+        asyncProvide = null,
+        hasExport = false;
 
     function transform(program, deps, file) {
         var body = program.body,
-            defineArgs = [t.literal(bemNaming.stringify({...fileBemItem, modName : undefined }))],
-            declParams = [t.identifier(asyncProvide || 'provide')];
+            ymArgs = [],
+            ymBodyArgNames = [];
 
-        if(deps.length) {
-            deps = deps.map(d => {
-                declParams.push(t.identifier(d[0]));
-                return t.literal(d[1]);
-            });
-            defineArgs.push(t.arrayExpression(deps));
+        if(hasExport) {
+            ymArgs.push(t.literal(bemNaming.stringify({...fileBemItem, modName : undefined })));
+            ymBodyArgNames.push(t.identifier(asyncProvide || 'provide'));
         }
 
-        prevDecl && declParams.push(t.identifier(prevDecl));
+        if(deps.length) {
+            deps = deps
+                .filter(d => !hasExport || !d[2])
+                .map(d => {
+                    ymBodyArgNames.push(t.identifier(d[0]));
+                    return t.literal(d[1]);
+                });
+            ymArgs.push(t.arrayExpression(deps));
+        }
 
-        defineArgs.push(t.functionExpression(null, declParams, t.blockStatement(body)));
+        if(!(deps.length || hasExport)) return;
+
+        hasExport && prevDecl && ymBodyArgNames.push(t.identifier(prevDecl));
+
+        ymArgs.push(t.functionExpression(null, ymBodyArgNames, t.blockStatement(body)));
 
         var call = t.callExpression(
             t.memberExpression(
@@ -33,10 +42,10 @@ export default function({ Plugin, types: t }) {
                     t.identifier('require'),
                     [t.literal('ym')]
                 ),
-                t.identifier('define'),
+                t.identifier(hasExport? 'define' : 'require'),
                 false
             ),
-            defineArgs);
+            ymArgs);
 
         program.body = [t.expressionStatement(call)];
     }
@@ -52,10 +61,12 @@ export default function({ Plugin, types: t }) {
                     node.body = file.dynamicImports.concat(node.body);
 
                     bemModules[file.opts.filename] && transform(node, deps, file.opts);
+
                     fileBemItem = null;
                     deps = [];
                     prevDecl = null;
                     asyncProvide = null;
+                    hasExport = false;
                     //this.unshiftContainer('body', t.expressionStatement(t.literal('use helloworld')));
                 }
             },
@@ -76,22 +87,23 @@ export default function({ Plugin, types: t }) {
 
                     if(importBemItem.modName) throw Error(`Importing of modifier modules (${importName}) is not supported.`);
 
-                    if(fileBemItem.block === importBemItem.block && fileBemItem.elem === importBemItem.elem) {
-                        prevDecl = localName;
-                    } else {
-                        deps.push([localName, importName]);
-                    }
+                    var isPrevDecl = fileBemItem.block === importBemItem.block && fileBemItem.elem === importBemItem.elem;
+                    isPrevDecl && (prevDecl = localName);
+                    deps.push([localName, importName, isPrevDecl]);
 
                     return [];
                 } else if(importPath === 'ym:provide') {
                     asyncProvide = getSingleImportDefaultSpecifier(node).local.name;
+                    hasExport = true;
                     return [];
                 }
             },
 
             ExportDefaultDeclaration(node, parent, scope, file) {
-                if(bemModules[file.opts.filename])
+                if(bemModules[file.opts.filename]) {
+                    hasExport = true;
                     return t.callExpression(t.identifier('provide'), [node.declaration])
+                }
             }
         }
     });
