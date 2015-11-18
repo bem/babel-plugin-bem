@@ -22,12 +22,19 @@ export default function({ Plugin, types: t }) {
 
         if(deps.length) {
             deps = deps
+                .map(d => {
+                    var [localName, importName, importBemItem] = d,
+                        isPrevDecl = fileBemItem.block === importBemItem.block && fileBemItem.elem === importBemItem.elem;
+                    isPrevDecl && (prevDecl = localName);
+                    return [localName, importName, isPrevDecl];
+                })
                 .filter(d => !hasExport || !d[2])
                 .map(d => {
                     ymBodyArgNames.push(t.identifier(d[0]));
                     return t.literal(d[1]);
                 });
-            ymArgs.push(t.arrayExpression(deps));
+
+            deps.length && ymArgs.push(t.arrayExpression(deps));
         }
 
         if(!(deps.length || hasExport)) return;
@@ -87,15 +94,23 @@ export default function({ Plugin, types: t }) {
 
                     if(importBemItem.modName) throw Error(`Importing of modifier modules (${importName}) is not supported.`);
 
-                    var isPrevDecl = fileBemItem.block === importBemItem.block && fileBemItem.elem === importBemItem.elem;
-                    isPrevDecl && (prevDecl = localName);
-                    deps.push([localName, importName, isPrevDecl]);
+                    deps.push([localName, importName, importBemItem]);
 
                     return [];
                 } else if(importPath === 'ym:provide') {
                     asyncProvide = getSingleImportDefaultSpecifier(node).local.name;
                     hasExport = true;
                     return [];
+                }
+            },
+
+            ExportNamedDeclaration(node, parent, scope, file) {
+                if(bemModules[file.opts.filename] && node.declaration.kind === 'const') {
+                    var declaration = node.declaration.declarations[0];
+                    if(declaration.id.name === '__bemName') {
+                        fileBemItem = bemNaming.parse(declaration.init.value);
+                        return [];
+                    }
                 }
             },
 
